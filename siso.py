@@ -1,7 +1,7 @@
 from tkinter import Tk, ttk, TclError, StringVar
 from tkinter import PhotoImage, Canvas
 from tkinter import (Toplevel, Menu, Text)
-from tkinter import filedialog
+from tkinter import filedialog, colorchooser
 from tkinter.ttk import (Style, Frame, Label, PanedWindow, Button, Combobox, Entry, Separator)
 from tkinter.constants import LEFT, SEL, INSERT, DISABLED, NORMAL, END, CENTER, YES, ACTIVE, SUNKEN, RIGHT, CURRENT
 from math import floor
@@ -53,7 +53,7 @@ class Siso(Frame):
         # create tilemap
         self.tiles = []
         self.loadTiles(TILEMAPFILE)
-        #self.createMenubar()
+        self.createMenubar()
         self.createCanvas()
         #self.createContextMenu()
         self.draw()
@@ -71,7 +71,7 @@ class Siso(Frame):
                 newtile.color = color
                 newtile.r = r
                 newtile.c = c
-                row.append(Tile([color,0,0,0,0]))
+                row.append(newtile)
             tiles.append(row)
         self.tiles = tiles
         
@@ -104,7 +104,20 @@ class Siso(Frame):
                     r += 1
             self.tiles = tiles
 
+    def newTilemapDialog(self):
+        self.createTiles(20, 20)
+        self.redraw()
         
+    def tileColorDialog(self):
+        ''' Set the color to change tiles to '''
+        self.canvas.tilecolor = colorchooser.askcolor()[1]
+        self.canvas.action = 'color'
+        
+    def tileActionRaise(self):
+        self.canvas.action = 'raise'
+    
+    def tileActionLower(self):
+        self.canvas.action = 'lower'
     
     def createCanvas(self):
         ''' Create the main canvas '''
@@ -116,6 +129,38 @@ class Siso(Frame):
         self.canvas.offsetx = self.WINDOW_WIDTH /2
         self.canvas.offsety = GH * 3
         self.canvas.coordinates = False
+        self.canvas.tilecolor = '#ff9900'
+        self.canvas.action = 'raise'
+
+    
+    def createMenubar(self):
+        ''' Create the Menubar '''
+        self.menubar = Menu(self.master)
+        self.master.config(menu=self.menubar)
+        # add submenus
+        self.menubar.add_cascade(label='File', menu=self.createMenubarFile())
+        self.menubar.add_cascade(label='Edit', menu=None)
+        self.menubar.add_cascade(label='Action', menu=self.createMenubarAction())
+        self.menubar.add_cascade(label='View', menu=None)
+        self.menubar.add_cascade(label='Help', menu=None)
+        
+    def createMenubarFile(self):
+        ''' Create the File submenu '''
+        self.menubar_file = Menu(self.menubar, tearoff=0)
+        self.menubar_file.add_command(label='New', command=self.newTilemapDialog)
+        self.menubar_file.add_command(label='Load')
+        self.menubar_file.add_command(label='Save')
+        self.menubar_file.add_separator()
+        self.menubar_file.add_command(label='Exit', command=self.quit)
+        return self.menubar_file      
+      
+    def createMenubarAction(self):
+        ''' Create the Action submenu '''
+        self.menubar_action = Menu(self.menubar, tearoff=0)
+        self.menubar_action.add_command(label='Raise', command=self.tileActionRaise)
+        self.menubar_action.add_command(label='Lower', command=self.tileActionLower)
+        self.menubar_action.add_command(label='Color', command=self.tileColorDialog)
+        return self.menubar_action
         
     def setBinds(self):
         ''' Set binds for this window '''
@@ -150,14 +195,22 @@ class Siso(Frame):
         return tile
         
     def handleMouseWheel(self, event):
+        ''' When the mousewheel is scrolled 
+        Zoom in/out and adjust the position of the camera
+        '''
         if event.delta > 0:
             self.canvas.gh *= 2
             self.canvas.gs *= 2
             self.canvas.gw = self.canvas.gh * 2
+            
+            
         elif event.delta < 0:
             self.canvas.gh /= 2
             self.canvas.gs /= 2
             self.canvas.gw = self.canvas.gh * 2
+            
+            
+            
         self.redraw()
             
     def handleKeyPress(self, event):
@@ -183,6 +236,11 @@ class Siso(Frame):
         else:
             print(event.keycode)
             return
+        self.redraw()
+        
+    def setTileColor(self, tile):
+        ''' Change the color of a tile '''
+        self.tiles[tile.r][tile.c].color = self.canvas.tilecolor
         self.redraw()
         
     def increaseTileHT(self, tile, amount=5):
@@ -257,14 +315,29 @@ class Siso(Frame):
     def tileRightClick(self, event):
         ''' right click on a tile '''
         tile = self.getTileFromEvent(event)
-        self.increaseTileHeight(tile)
+        print(self.canvas.action)
+        if self.canvas.action == 'lower':
+            self.decreaseTileHeight(tile)
+        elif self.canvas.action == 'raise':
+            self.increaseTileHeight(tile)
+        elif self.canvas.action == 'color':
+            self.setTileColor(tile)
     
-    def increaseTileHeight(self, tile):
+    def increaseTileHeight(self, tile, amount=10):
         ''' Increase the height of all the corners of a tile and the surrounding tiles affected corners '''
-        self.increaseTileHB(self.tiles[tile.r][tile.c], 10)
-        self.increaseTileHR(self.tiles[tile.r][tile.c], 10)
-        self.increaseTileHL(self.tiles[tile.r][tile.c], 10)
-        self.increaseTileHT(self.tiles[tile.r][tile.c], 10)
+        self.increaseTileHB(self.tiles[tile.r][tile.c], amount)
+        self.increaseTileHR(self.tiles[tile.r][tile.c], amount)
+        self.increaseTileHL(self.tiles[tile.r][tile.c], amount)
+        self.increaseTileHT(self.tiles[tile.r][tile.c], amount)
+        self.redraw()
+
+    def decreaseTileHeight(self, tile, amount=10):
+        ''' Decrease the height of all the corners of a tile and the surrounding tiles affected corners '''
+        amount *= -1
+        self.increaseTileHB(self.tiles[tile.r][tile.c], amount)
+        self.increaseTileHR(self.tiles[tile.r][tile.c], amount)
+        self.increaseTileHL(self.tiles[tile.r][tile.c], amount)
+        self.increaseTileHT(self.tiles[tile.r][tile.c], amount)
         self.redraw()
                 
     def drawCircleAtRC(self, r, c, offsetx=350, offsety=80):
@@ -283,8 +356,8 @@ class Siso(Frame):
         gh = self.canvas.gh
         gs = self.canvas.gs
         
-        offsetx = self.canvas.offsetx * self.canvas.gs
-        offsety = self.canvas.offsety * self.canvas.gs
+        offsetx = self.canvas.offsetx
+        offsety = self.canvas.offsety
         
         ht = tile.ht * gs
         hr = tile.hr * gs
