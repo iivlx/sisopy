@@ -12,6 +12,7 @@ from tile import Tile
 
 import time
 import random
+import math
 
 class Siso(Frame):
     ''' Main window of the application    
@@ -123,6 +124,8 @@ class Siso(Frame):
         ''' Create the main canvas '''
         self.canvas = Canvas(self, width=CANVAS_WIDTH, height=CANVAS_HEIGHT, background=CANVAS_BG)
         self.canvas.grid(row=0,column=0)
+        self.canvas.width = CANVAS_WIDTH
+        self.canvas.height = CANVAS_HEIGHT
         self.canvas.gh = GH
         self.canvas.gw = GW
         self.canvas.gs = GS
@@ -141,7 +144,7 @@ class Siso(Frame):
         self.menubar.add_cascade(label='File', menu=self.createMenubarFile())
         self.menubar.add_cascade(label='Edit', menu=None)
         self.menubar.add_cascade(label='Action', menu=self.createMenubarAction())
-        self.menubar.add_cascade(label='View', menu=None)
+        self.menubar.add_cascade(label='View', menu=self.createMenubarView())
         self.menubar.add_cascade(label='Help', menu=None)
         
     def createMenubarFile(self):
@@ -161,6 +164,18 @@ class Siso(Frame):
         self.menubar_action.add_command(label='Lower', command=self.tileActionLower)
         self.menubar_action.add_command(label='Color', command=self.tileColorDialog)
         return self.menubar_action
+    
+    def createMenubarView(self):
+        ''' Create the View submenu '''
+        self.menubar_action = Menu(self.menubar, tearoff=0)
+        self.menubar_action.add_command(label='Reset', command=self.viewReset)
+        return self.menubar_action
+    
+    def viewReset(self):
+        ''' Reset the viewbox '''
+        self.canvas.offsetx = 0
+        self.canvas.offsety = 0
+        self.redraw()
         
     def setBinds(self):
         ''' Set binds for this window '''
@@ -176,6 +191,8 @@ class Siso(Frame):
         ''' Draw '''
         self.drawTiles()
         
+#         self.canvas.create_line(0,self.canvas.width/2, self.canvas.height, self.canvas.width/2)
+#         self.canvas.create_line(self.canvas.height/2, 0, self.canvas.height/2, self.canvas.width)
         
     def drawTiles(self):
         ''' Draw the tilemap '''
@@ -198,17 +215,25 @@ class Siso(Frame):
         ''' When the mousewheel is scrolled 
         Zoom in/out and adjust the position of the camera
         '''
+        zscale = 0.1
         if event.delta > 0:
-            self.canvas.gh *= 2
-            self.canvas.gs *= 2
-            self.canvas.gw = self.canvas.gh * 2
-            
-            
+            zoom = math.exp(1*zscale)            
         elif event.delta < 0:
-            self.canvas.gh /= 2
-            self.canvas.gs /= 2
-            self.canvas.gw = self.canvas.gh * 2
+            zoom = math.exp(-1*zscale)
             
+        mousex = event.x - self.canvas.offsetx # mouse x position
+        mousey = event.y - self.canvas.offsety # mouse y position
+#         mousex = (self.canvas.width/2) - self.canvas.offsetx # center of canvas
+#         mousey = (self.canvas.height/2) - self.canvas.offsety # center of canvas
+        
+        
+        self.canvas.offsetx += mousex/(self.canvas.gs*zoom) - mousex/self.canvas.gs
+        self.canvas.offsety += mousey/(self.canvas.gs*zoom) - mousey/self.canvas.gs
+
+            
+        self.canvas.gs *= zoom # scale
+        self.canvas.gh *= zoom
+        self.canvas.gw = self.canvas.gh * 2
             
             
         self.redraw()
@@ -348,7 +373,7 @@ class Siso(Frame):
         y += GH/2
         size = GH/4
         
-        self.canvas.create_oval(x-size,y-size,x+size,y+size, fill=e[2])
+        self.canvas.create_oval(x-size,y-size,x+size,y+size, fill='red')
         
     def drawTile(self, r, c, tile):
         ''' Draw a tile '''
@@ -385,7 +410,6 @@ class Siso(Frame):
         
         if self.canvas.coordinates:
             self.canvas.create_text(x+10, y+10, text=f'{r}, {c}')
-
 
     
 if __name__ == '__main__':
