@@ -5,7 +5,11 @@ from tkinter import filedialog, colorchooser
 from tkinter.ttk import (Style, Frame, Label, PanedWindow, Button, Combobox, Entry, Separator)
 from tkinter.constants import LEFT, SEL, INSERT, DISABLED, NORMAL, END, CENTER, YES, ACTIVE, SUNKEN, RIGHT, CURRENT
 from math import floor
+from PIL import ImageTk
+from PIL import Image
 
+from os import listdir
+from os.path import isfile, join
 from icon import loadIcon, IIVLXICO
 from data import *
 from tile import Tile
@@ -53,6 +57,7 @@ class Siso(Frame):
         self.grid_columnconfigure(0, weight=0)
         # create tilemap
         self.tiles = []
+        self.loadTextures(TEXTUREDIRECTORY)
         self.loadTiles(TILEMAPFILE)
         self.createMenubar()
         self.createCanvas()
@@ -104,6 +109,18 @@ class Siso(Frame):
                     tiles.append(row)
                     r += 1
             self.tiles = tiles
+
+    def loadTextures(self, directory):
+        ''' load all textures from a directory'''
+        textures = {}
+        for file in listdir(directory):
+            if not isfile(join(directory, file)): # skip if directory
+               continue
+            with open(f"{directory}/{file}") as f:
+                texture = PhotoImage(file=f"{directory}/{file}")
+                textures[file] = texture
+        self.textures = textures
+
 
     def newTilemapDialog(self):
         self.createTiles(20, 20)
@@ -268,66 +285,172 @@ class Siso(Frame):
         self.tiles[tile.r][tile.c].color = self.canvas.tilecolor
         self.redraw()
         
-    def increaseTileHT(self, tile, amount=5):
+    def getTileRight(self, tile):
+        if tile.r == 0: # no tile
+            return None
+        try:
+            return self.tiles[tile.r-1][tile.c+1]
+        except IndexError:
+            return None
+        
+    def getTileLeft(self, tile):
+        if tile.c == 0: # no tile
+            return None
+        try:
+            return self.tiles[tile.r+1][tile.c-1]
+        except IndexError:
+            return None
+        
+    def getTileTop(self, tile):
+        if tile.c == 0 or tile.r == 0: # no tile
+            return None
+        try:
+            return self.tiles[tile.r-1][tile.c-1]
+        except IndexError:
+            return None
+        
+    def getTileBottom(self, tile):
+        try:
+            return self.tiles[tile.r+1][tile.c+1]
+        except IndexError:
+            return None
+        
+    def getTileTopRight(self, tile):
+        if tile.r == 0: # no tile
+            return None
+        try:
+            return self.tiles[tile.r-1][tile.c]
+        except IndexError:
+            return None
+                
+    def getTileTopLeft(self, tile):
+        if tile.c == 0: # no tile
+            return None
+        try:
+            return self.tiles[tile.r][tile.c-1]
+        except IndexError:
+            return None
+        
+    def getTileBottomRight(self, tile):
+        try:
+            return self.tiles[tile.r][tile.c+1]
+        except IndexError:
+            return None
+                
+    def getTileBottomLeft(self, tile):
+        try:
+            return self.tiles[tile.r+1][tile.c]
+        except IndexError:
+            return None      
+        
+    def increaseTileHT(self, tile, amount=16):
         ''' Increase the top corner of one tile and surrounding tiles '''
-        if tile.r > 0:
-            self.tiles[tile.r-1][tile.c].hl += amount
-        if tile.c > 0:
-            self.tiles[tile.r][tile.c-1].hr += amount
-        if tile.c > 0 and tile.r > 0:
-            self.tiles[tile.r-1][tile.c-1].hb += amount        
+        max = tile.ht - amount
+        top = self.getTileTop(tile)
+        topright = self.getTileTopRight(tile)
+        topleft = self.getTileTopLeft(tile)
+        # check tiles
+        if tile.hl <= max or tile.hr <= max:
+            return False
+        if top:
+            if top.hl <= max or top.hr <= max:
+                return False
+        if topright:
+            if topright.ht <= max or topright.hb <= max:
+                return False
+        if topleft:
+            if topleft.ht <= max or topleft.hb <= max:
+                return False
+        # increase vertices
+        if top:
+            top.hb += amount       
+        if topright:
+            topright.hl += amount
+        if topleft:
+            topleft.hr += amount
+            
+             
         tile.ht += amount
     
-    def increaseTileHR(self, tile, amount=5):
+    def increaseTileHR(self, tile, amount=16):
         ''' Increase the right corner of one tile and surrounding tiles '''
-        if tile.r > 0:
-            try: # tile previous row
-                self.tiles[tile.r-1][tile.c].hb += amount
-            except IndexError:
-                pass
-                
-            try: # tile previous row next column
-                self.tiles[tile.r-1][tile.c+1].hl += amount
-            except IndexError:
-                pass
-        try: # next tile in row
-            self.tiles[tile.r][tile.c+1].ht += amount
-        except IndexError:
-            pass 
+        max = tile.hr - amount
+        topright = self.getTileTopRight(tile)
+        bottomright = self.getTileBottomRight(tile)
+        right = self.getTileRight(tile)
+        # check tiles
+        if tile.ht <= max or tile.hb <= max:
+            return False
+        if topright:
+            if topright.hl <= max or topright.hr <= max:
+                return False
+        if right:
+            if right.ht <= max or right.hb <= max:
+                return False
+        if bottomright:
+            if bottomright.hl <= max or bottomright.hr <= max:
+                return False
+        # increase vertices
+        if topright:
+            topright.hb += amount
+        if bottomright:
+            bottomright.ht += amount
+        if right:
+            right.hl += amount
         tile.hr += amount
         
-    def increaseTileHL(self, tile, amount=5):
+    def increaseTileHL(self, tile, amount=16):
         ''' Increase the left corner of one tile and surrounding tiles '''
-        try:
-            self.tiles[tile.r+1][tile.c].ht += amount
-        except IndexError:
-            pass    
-        if tile.c > 0:
-            try:
-                self.tiles[tile.r][tile.c-1].hb += amount
-            except IndexError:
-                pass    
-            try:
-                self.tiles[tile.r+1][tile.c-1].hr += amount
-            except IndexError:
-                pass    
-            
+        max = tile.hl - amount
+        topleft = self.getTileTopLeft(tile)
+        left = self.getTileLeft(tile)
+        bottomleft = self.getTileBottomLeft(tile)
+        # check tiles
+        if tile.ht <= max or tile.hb <= max:
+            return False
+        if topleft:
+            if topleft.hl <= max or topleft.hr <= max:
+                return False
+        if left:
+            if left.ht <= max or left.hb <= max:
+                return False
+        if bottomleft:
+            if bottomleft.hl <= max or bottomleft.hr <= max:
+                return False
+        # increase vertices
+        if topleft:
+            self.getTileTopLeft(tile).hb += amount
+        if left:
+            self.getTileLeft(tile).hr += amount
+        if bottomleft:
+            self.getTileBottomLeft(tile).ht += amount
         tile.hl += amount
 
-    def increaseTileHB(self, tile, amount=5):
+    def increaseTileHB(self, tile, amount=16):
         ''' Increase the bottom corner of one tile and surrounding tiles '''
-        try: # 
-            self.tiles[tile.r+1][tile.c].hr += amount
-        except IndexError:
-            pass    
-        try:
-            self.tiles[tile.r][tile.c+1].hl += amount
-        except IndexError:
-            pass    
-        try:
-            self.tiles[tile.r+1][tile.c+1].ht += amount
-        except IndexError:
-            pass    
+        max = tile.hb - amount
+        bottomright = self.getTileBottomRight(tile)
+        bottomleft = self.getTileBottomLeft(tile)
+        bottom = self.getTileBottom(tile)
+        # check tiles
+        if tile.hl <= max or tile.hr <= max:
+            return False
+        if bottomleft:
+            if bottomleft.ht <= max or bottomleft.hb <= max:
+                    return False
+        if bottomright:
+            if bottomright.ht <= max or bottomright.hb <= max:
+                return False
+        if bottom:
+            if bottom.hl <= max or bottom.ht <= max:
+                return False
+        # increase vertices
+        if bottom:
+            bottom.ht += amount
+        if bottomright:
+            bottomright.hl += amount
+        if bottomleft:
+            bottomleft.hr += amount
         tile.hb += amount
         
         
@@ -340,7 +463,7 @@ class Siso(Frame):
     def tileRightClick(self, event):
         ''' right click on a tile '''
         tile = self.getTileFromEvent(event)
-        print(self.canvas.action)
+        #print(self.canvas.action)
         if self.canvas.action == 'lower':
             self.decreaseTileHeight(tile)
         elif self.canvas.action == 'raise':
@@ -348,7 +471,7 @@ class Siso(Frame):
         elif self.canvas.action == 'color':
             self.setTileColor(tile)
     
-    def increaseTileHeight(self, tile, amount=10):
+    def increaseTileHeight(self, tile, amount=16):
         ''' Increase the height of all the corners of a tile and the surrounding tiles affected corners '''
         self.increaseTileHB(self.tiles[tile.r][tile.c], amount)
         self.increaseTileHR(self.tiles[tile.r][tile.c], amount)
@@ -390,21 +513,78 @@ class Siso(Frame):
         hb = tile.hb * gs
         cl = tile.color
         
-        
         x = (c-r)*(gw/2) + offsetx # x increases for every row, decreases for every column
         y = (c+r)*(gh/2) + offsety # y decreases for every column and row
         
-        self.canvas.create_polygon(
-            x, y - ht,                            # top
-            x+(gw/2), y+(gh/2) - hr,              # right
-            x, y+(gh) - hb,                       # bottom
-            x-(gw/2), y+(gh/2) - hl,              # left
-            fill=cl,
-            activefill='white',
-            outline='black',
-            tags=f't{r}x{c}',
-            )
-
+        top = (x, y - ht)
+        right = (x+(gw/2), y+(gh/2) - hr)
+        bottom = (x, y+(gh) - hb)
+        left = (x-(gw/2), y+(gh/2) - hl)
+        
+        flat = {'fill':'#99bc60'}
+        slopel = {'fill':'#78a337'}
+        sloper = {'fill':'#bce080'}
+        config = {'outline':'#91b249', 'tags':f't{r}x{c}'}
+        if ht == hr == hl == hb: # flat tile
+            self.canvas.create_polygon(*top, *right, *bottom, *left, width=2, **flat, **config)
+        elif hl == hb == hr and ht > hb: # slope top up
+            self.canvas.create_polygon(*bottom, *right, *left, **flat, **config)
+            self.canvas.create_polygon(*top, *right, *left, **slopel, **config)
+        elif hl == hb == hr and ht < hb: # slope top down
+            self.canvas.create_polygon(*bottom, *right, *left, **flat, **config)
+            self.canvas.create_polygon(*top, *right, *left, **sloper, **config)
+        elif hl == ht == hr and hb > ht: # slope bottom up
+            self.canvas.create_polygon(*top,*right, *left, **flat, **config)
+            self.canvas.create_polygon( *bottom, *right, *left, **sloper, **config)
+        elif hl == ht == hr and hb < ht: # slope bottom down
+            self.canvas.create_polygon(*top,*right, *left, **flat, **config)
+            self.canvas.create_polygon( *bottom, *right, *left, **slopel, **config)
+        elif ht == hb == hl and hr > hl: # slope right up
+            self.canvas.create_polygon(*top,*bottom, *left, **flat, **config)
+            self.canvas.create_polygon( *top, *bottom, *right, **slopel, **config)
+        elif ht == hb == hl and hr < hl: # slope right down
+            self.canvas.create_polygon(*top,*bottom, *left, **flat, **config)
+            self.canvas.create_polygon( *top, *bottom, *right, **sloper, **config)
+        elif ht == hb == hr and hl > hr: # slope left up
+            self.canvas.create_polygon( *top, *bottom, *right, **flat, **config)
+            self.canvas.create_polygon(*top,*bottom,*left, **sloper, **config)
+        elif ht == hb == hr and hl < hr: # slope left down
+            self.canvas.create_polygon(*top,*bottom, *left, **flat, **config)
+            self.canvas.create_polygon( *top, *bottom, *right, **slopel, **config)
+            
+        elif ht == hr and hb == hl and ht > hb: # slope upright
+            self.canvas.create_polygon(*top, *right, *bottom, *left, **slopel, **config)
+        elif ht == hr and hb == hl and ht < hb: # slope downleft
+            self.canvas.create_polygon(*top, *right, *bottom, *left, **sloper, **config)
+        elif ht == hl and hb == hr and ht > hb: # slope upleft
+            self.canvas.create_polygon(*top, *right, *bottom, *left, **sloper, **config)
+        elif ht == hl and hb == hr and ht < hb: # slope downright
+            self.canvas.create_polygon(*top, *right, *bottom, *left, **slopel, **config)
+            
+        elif hl == hr and hb < hl and ht > hl: # slope up
+            self.canvas.create_polygon(*top, *right, *left, **slopel, **config)
+            self.canvas.create_polygon(*bottom, *right, *left, **slopel, **config)
+        elif hl == hr and hb > hl and ht < hl: # slope down
+            self.canvas.create_polygon(*top, *right, *left, **sloper, **config)
+            self.canvas.create_polygon(*bottom, *right, *left, **sloper, **config)
+        elif ht == hb and hl < ht and hr > ht: # slope right
+            self.canvas.create_polygon(*top, *bottom, *left, **slopel, **config)
+            self.canvas.create_polygon(*top, *bottom, *right, **slopel, **config)
+        elif ht == hb and hl > ht and hr < ht: # slope left
+            self.canvas.create_polygon(*top, *bottom, *left, **sloper, **config)
+            self.canvas.create_polygon(*top, *bottom, *right, **sloper, **config)
+            
+        elif ht == hb and hl < ht and hr < ht: # slope down left/right
+            self.canvas.create_polygon(*top, *bottom, *left, **slopel, **config)
+            self.canvas.create_polygon(*top, *bottom, *right, **sloper, **config)
+        elif hl == hr and ht < hl and hb < hl: # slope down top/bottom
+            self.canvas.create_polygon(*top, *left, *right, **sloper, **config)
+            self.canvas.create_polygon(*bottom, *left, *right, **slopel, **config)
+            
+        else:
+            print(ht, hr, hb, hl)
+            self.canvas.create_polygon(*top, *right, *bottom, *left, **config)
+            
         self.canvas.tag_bind(f't{r}x{c}', '<Button-1>', self.tileClick)
         self.canvas.tag_bind(f't{r}x{c}', '<Button-3>', self.tileRightClick)
         
