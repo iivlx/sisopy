@@ -58,7 +58,7 @@ class Siso(Frame):
         self.grid_columnconfigure(0, weight=0)
         # create tilemap
         self.tiles = []
-        self.loadTextures(TEXTUREDIRECTORY)
+        #self.loadTextures(TEXTUREDIRECTORY)
         self.loadColors(COLORMAPFILE)
         self.loadTiles(TILEMAPFILE)
         self.createMenubar()
