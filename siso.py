@@ -70,18 +70,22 @@ class Siso(Frame):
         
     def createTiles(self, rows, columns):
         ''' Create a new blank tilemap '''
-        color = '#009900'
         tiles = []
         for r in range(rows):
             row = []
             for c in range(columns):
                 newtile = Tile()
-                newtile.color = color
+                newtile.color = 0
+                newtile.ht = 0
+                newtile.hr = 0
+                newtile.hl = 0
+                newtile.hb = 0
                 newtile.r = r
                 newtile.c = c
                 row.append(newtile)
             tiles.append(row)
         self.tiles = tiles
+        
     def loadColors(self, file):
         ''' load the color data from a file '''
         colors = []
