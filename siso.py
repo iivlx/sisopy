@@ -1,4 +1,4 @@
-from tkinter import Tk, ttk, TclError, StringVar
+from tkinter import Tk, ttk, TclError, StringVar, BooleanVar
 from tkinter import PhotoImage, Canvas
 from tkinter import (Toplevel, Menu, Text)
 from tkinter import filedialog, colorchooser
@@ -61,6 +61,7 @@ class Siso(Frame):
         #self.loadTextures(TEXTUREDIRECTORY)
         self.loadColors(COLORMAPFILE)
         self.loadTiles(TILEMAPFILE)
+        self.createVariables()
         self.createMenubar()
         self.createCanvas()
         #self.createContextMenu()
@@ -137,7 +138,10 @@ class Siso(Frame):
                 texture = PhotoImage(file=f"{directory}/{file}")
                 textures[file] = texture
         self.textures = textures
-
+    
+    def createVariables(self):
+        ''' '''
+        self.coordinates = BooleanVar()
 
     def newTilemapDialog(self):
         self.createTiles(20, 20)
@@ -165,7 +169,6 @@ class Siso(Frame):
         self.canvas.gs = GS
         self.canvas.offsetx = self.WINDOW_WIDTH /2
         self.canvas.offsety = GH * 3
-        self.canvas.coordinates = False
         self.canvas.tilecolor = '#ff9900'
         self.canvas.action = 'raise'
 
@@ -203,6 +206,7 @@ class Siso(Frame):
         ''' Create the View submenu '''
         self.menubar_action = Menu(self.menubar, tearoff=0)
         self.menubar_action.add_command(label='Reset', command=self.viewReset)
+        self.menubar_action.add_checkbutton(label='Coordinates', onvalue=1, offvalue=0, variable=self.coordinates, command=self.redraw)
         return self.menubar_action
     
     def viewReset(self):
@@ -317,7 +321,7 @@ class Siso(Frame):
         elif event.keycode == 40: # down
             self.canvas.offsety -= 30
         elif event.keycode == 67: # c
-            self.canvas.coordinates = False if self.canvas.coordinates else True # toggle coordinates
+            self.coordinates.set(False if self.coordinates.get() else True) # toggle coordinates
         else:
             print(event.keycode)
             return
@@ -691,7 +695,7 @@ class Siso(Frame):
         self.canvas.tag_bind(f't{r}x{c}', '<Button-3>', self.tileRightClick)
         
         
-        if self.canvas.coordinates:
+        if self.coordinates.get():
             self.canvas.create_text(*top, tags=f't{r}x{c}', text=f'{r}, {c}')
         
     
