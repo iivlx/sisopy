@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 ''' siso
 Simple Isometric Example
  
@@ -10,6 +11,7 @@ __date__ = (17,4,2020) #d,m,y
 __version__ = (0,0,1) #0.0.1
 
 from tkinter import Tk
+
 from siso import Siso
 
 def main():

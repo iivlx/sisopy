@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+
+''' IIVLX Icon '''
+
 from tkinter import (PhotoImage, TclError)
 
 IIVLXICO = """R0lGODlhIAAgAPcAAAAAAAAAMwAAZgAAmQAAzAAA/wArAAArMwArZgArmQArzAAr/
