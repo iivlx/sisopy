@@ -1,4 +1,9 @@
+#!/usr/bin/env python3
+
+''' Tile Class '''
+
 class Tile:
+    ''' Tile Class '''
     def __init__(self):
         self.color = 0 # color
         self.ht = 0 # top
