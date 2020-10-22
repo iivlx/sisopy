@@ -1,7 +1,15 @@
+#!/usr/bin/env python3
+
+''' siso Main Window '''
+
+import time
+import random
+import math
+
 from tkinter import Tk, ttk, TclError, StringVar, BooleanVar
 from tkinter import PhotoImage, Canvas
 from tkinter import (Toplevel, Menu, Text)
-from tkinter import filedialog, colorchooser
+from tkinter import filedialog
 from tkinter.ttk import (Style, Frame, Label, PanedWindow, Button, Combobox, Entry, Separator)
 from tkinter.constants import LEFT, SEL, INSERT, DISABLED, NORMAL, END, CENTER, YES, ACTIVE, SUNKEN, RIGHT, CURRENT
 from math import floor
@@ -11,13 +19,12 @@ from os import listdir
 from os.path import isfile, join
 from operator import ge, le
 
+import pprint # sponge
+
 from icon import loadIcon, IIVLXICO
 from data import *
 from tile import Tile
-
-import time
-import random
-import math
+from ui import ColorEditor
 
 class Siso(Frame):
     ''' Main window of the application    
@@ -144,13 +151,13 @@ class Siso(Frame):
         self.coordinates = BooleanVar()
 
     def newTilemapDialog(self):
-        self.createTiles(20, 20)
+        self.createTiles(4, 4)
         self.redraw()
         
     def tileColorDialog(self):
         ''' Set the color to change tiles to '''
-        self.canvas.tilecolor = colorchooser.askcolor()[1]
-        self.canvas.action = 'color'
+        self.coloreditor = ColorEditor(self) # show the color editor
+        #self.canvas.action = 'color'
         
     def tileActionRaise(self):
         self.canvas.action = 'raise'
@@ -167,6 +174,7 @@ class Siso(Frame):
         self.canvas.gh = GH
         self.canvas.gw = GW
         self.canvas.gs = GS
+        self.canvas.baseheight = CANVAS_BASEHEIGHT
         self.canvas.offsetx = self.WINDOW_WIDTH /2
         self.canvas.offsety = GH * 3
         self.canvas.tilecolor = '#ff9900'
@@ -320,8 +328,22 @@ class Siso(Frame):
             self.canvas.offsetx -= 30
         elif event.keycode == 40: # down
             self.canvas.offsety -= 30
+        elif event.keycode == 86: # v
+            if self.selected:
+                print(self.selected.ht)
+                print(self.selected.hr)
+                print(self.selected.hb)
+                print(self.selected.hl)
         elif event.keycode == 67: # c
             self.coordinates.set(False if self.coordinates.get() else True) # toggle coordinates
+        elif event.keycode == 69: # e
+            self.rotateTiles('clockwise')
+        elif event.keycode == 81: # q
+            self.rotateTiles('counterclockwise')
+        elif event.keycode == 32: # space
+            print('Tiles:')
+            p = pprint.PrettyPrinter()
+            p.pprint(self.tiles)
         else:
             print(event.keycode)
             return
@@ -551,6 +573,46 @@ class Siso(Frame):
         self.increaseTileHL(self.tiles[tile.r][tile.c], amount)
         self.increaseTileHT(self.tiles[tile.r][tile.c], amount)
         self.redraw()
+        
+    def rotateTiles(self, direction='clockwise'):
+        ''' rotate the tiles 
+        Rotate all the vertices first, then the matrix of tiles
+        '''
+        #print(self.tiles[0])
+        #print(self.tiles[1])
+        if direction == 'clockwise':
+            for r in self.tiles:
+                for tile in r:
+                    ht = tile.ht
+                    hr = tile.hr
+                    hb = tile.hb
+                    hl = tile.hl
+                    tile.ht = hl
+                    tile.hr = ht
+                    tile.hb = hr
+                    tile.hl = hb
+            rotated = list(zip(*self.tiles[::-1]))
+        elif direction == 'counterclockwise':
+            for r in self.tiles:
+                for tile in r:
+                    ht = tile.ht
+                    hr = tile.hr
+                    hb = tile.hb
+                    hl = tile.hl
+                    tile.ht = hr
+                    tile.hr = hb
+                    tile.hb = hl
+                    tile.hl = ht
+            rotated2 = list(zip(*self.tiles[::-1]))
+            rotated1 = list(zip(*rotated2[::-1]))
+            rotated = list(zip(*rotated1[::-1]))
+        
+        self.tiles = rotated
+        for r, row in enumerate(self.tiles):
+            for c, tile in enumerate(row):
+                tile.r = r
+                tile.c = c
+        
                 
     def drawCircleAtRC(self, r, c, offsetx=350, offsety=80):
         ''' Draw a circle at a tile coordinates '''
@@ -599,7 +661,7 @@ class Siso(Frame):
             self.canvas.create_polygon(*top, *right, *left, **sloper, **config)
         elif hl == ht == hr and hb > ht: # slope bottom up
             self.canvas.create_polygon(*top,*right, *left, **flat, **config)
-            self.canvas.create_polygon( *bottom, *right, *left, **sloper, **config)
+            #self.canvas.create_polygon( *bottom, *right, *left, **sloper, **config) # this would be invisible
         elif hl == ht == hr and hb < ht: # slope bottom down
             self.canvas.create_polygon(*top,*right, *left, **flat, **config)
             self.canvas.create_polygon( *bottom, *right, *left, **slopel, **config)
@@ -626,17 +688,22 @@ class Siso(Frame):
             self.canvas.create_polygon(*top, *right, *bottom, *left, **slopel, **config)
             
         elif hl == hr and hb < hl and ht > hl: # slope up
-            self.canvas.create_polygon(*top, *right, *left, **slopel, **config)
-            self.canvas.create_polygon(*bottom, *right, *left, **slopel, **config)
+            self.canvas.create_polygon(*top, *right, *bottom, *left, **slopel, **config)
+            #self.canvas.create_polygon(*top, *right, *left, **slopel, **config)
+            #self.canvas.create_polygon(*bottom, *right, *left, **slopel, **config)
         elif hl == hr and hb > hl and ht < hl: # slope down
-            self.canvas.create_polygon(*top, *right, *left, **sloper, **config)
-            self.canvas.create_polygon(*bottom, *right, *left, **sloper, **config)
+            pass
+            #self.canvas.create_polygon(*top, *right, *bottom, *left, **sloper, **config) # this would be invisible
+            #self.canvas.create_polygon(*top, *right, *left, **sloper, **config)
+            #self.canvas.create_polygon(*bottom, *right, *left, **sloper, **config)
         elif ht == hb and hl < ht and hr > ht: # slope right
-            self.canvas.create_polygon(*top, *bottom, *left, **slopel, **config)
-            self.canvas.create_polygon(*top, *bottom, *right, **slopel, **config)
+            self.canvas.create_polygon(*top, *right, *bottom, *left, **slopel, **config)
+            #self.canvas.create_polygon(*top, *bottom, *left, **slopel, **config)
+            #self.canvas.create_polygon(*top, *bottom, *right, **slopel, **config)
         elif ht == hb and hl > ht and hr < ht: # slope left
-            self.canvas.create_polygon(*top, *bottom, *left, **sloper, **config)
-            self.canvas.create_polygon(*top, *bottom, *right, **sloper, **config)
+            self.canvas.create_polygon(*top, *right, *bottom, *left, **sloper, **config)
+            #self.canvas.create_polygon(*top, *bottom, *left, **sloper, **config)
+            #self.canvas.create_polygon(*top, *bottom, *right, **sloper, **config)
             
         elif ht == hb and hl < ht and hr < ht: # slope down left/right
             self.canvas.create_polygon(*top, *bottom, *left, **slopel, **config)
@@ -670,26 +737,41 @@ class Siso(Frame):
                 self.canvas.create_polygon(*left, *right, *top, **config)
             elif tile.hl == tile.hr == 0 and tile.hb < 0: # slope bottom
                 self.canvas.create_polygon(*left, *right, *bottom, **config)
+                
         # draw edges of map
+        base = self.canvas.baseheight
         if not self.getTileBottomLeft(tile):
             leftx, lefty = left
             rightx, righty = bottom
-            righth = hb + 128*gs
-            lefth = hl + 128*gs
-            right2 = (rightx, righty + righth)
-            left2 = (leftx, lefty + lefth)
-            if lefth >= 0 and righth >= 0:
-                self.canvas.create_polygon(*left, *bottom, *right2, *left2, fill='#65532d')
-
+            righth = hb + base *gs
+            lefth = hl + base*gs
+            rightdirt = (rightx, righty + righth)
+            leftdirt = (leftx, lefty + lefth)
+            rightwater = (rightx, righty - righth)
+            leftwater = (leftx, lefty - lefth)
+            if lefth == 0 and righth == 0: # flat
+                pass # don't need to draw
+            elif lefth >= 0 and righth >= 0: # dirt
+                self.canvas.create_polygon(*left, *bottom, *rightdirt, *leftdirt, fill='#65532d')
+            elif lefth <= 0 and righth <= 0: # water
+                self.canvas.create_polygon(*left, *bottom, *rightwater, *leftwater, fill='blue', stipple='gray50')
+                
+                
         if not self.getTileBottomRight(tile):
             leftx, lefty = bottom
             rightx, righty = right
-            lefth = hb + 128*gs
-            righth = hr + 128*gs
-            right2 = (rightx, righty + righth)
-            left2 = (leftx, lefty + lefth)
+            lefth = hb + base*gs
+            righth = hr + base*gs
+            rightdirt = (rightx, righty + righth)
+            leftdirt = (leftx, lefty + lefth)
+            rightwater = (rightx, righty - righth)
+            leftwater = (leftx, lefty - lefth)
+            if lefth == 0 and righth == 0: # flat
+                pass
             if lefth >= 0 and righth >= 0:
-                self.canvas.create_polygon(*bottom, *right, *right2, *left2, fill='#8d7e47')
+                self.canvas.create_polygon(*bottom, *right, *rightdirt, *leftdirt, fill='#8d7e47')
+            elif lefth <= 0 and righth <= 0: # water
+                self.canvas.create_polygon(*bottom, *right, *rightwater, *leftwater, fill='blue', stipple='gray50')
             
         self.canvas.tag_bind(f't{r}x{c}', '<Button-1>', self.tileClick)
         self.canvas.tag_bind(f't{r}x{c}', '<Button-3>', self.tileRightClick)
