@@ -13,8 +13,6 @@ from tkinter import filedialog
 from tkinter.ttk import (Style, Frame, Label, PanedWindow, Button, Combobox, Entry, Separator)
 from tkinter.constants import LEFT, SEL, INSERT, DISABLED, NORMAL, END, CENTER, YES, ACTIVE, SUNKEN, RIGHT, CURRENT
 from math import floor
-from PIL import ImageTk
-from PIL import Image
 from os import listdir
 from os.path import isfile, join
 from operator import ge, le
