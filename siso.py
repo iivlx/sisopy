@@ -22,7 +22,7 @@ import pprint # sponge
 from icon import loadIcon, IIVLXICO
 from data import *
 from tile import Tile
-from ui import ColorEditor
+# from ui import ColorEditor # apparently this is missing...
 
 class Siso(Frame):
     ''' Main window of the application    
@@ -154,7 +154,7 @@ class Siso(Frame):
         
     def tileColorDialog(self):
         ''' Set the color to change tiles to '''
-        self.coloreditor = ColorEditor(self) # show the color editor
+        #self.coloreditor = ColorEditor(self) # show the color editor # -- which is apparently missing
         #self.canvas.action = 'color'
         
     def tileActionRaise(self):
